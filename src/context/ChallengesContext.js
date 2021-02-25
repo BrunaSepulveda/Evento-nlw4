@@ -1,4 +1,4 @@
-import { createContext, useState } from 'react';
+import { createContext, useEffect, useState } from 'react';
 import challenges from '../../challenges.json'
 
 export const ChallengesContext = createContext();
@@ -9,17 +9,48 @@ export const ChallengesProvider = ({ children }) => {
   const [ challengesCompleted, setChallengesCompleted ] = useState(0);
   const [ activeChallenge, setActiveChallenge ] = useState(null);
 
-  const experienceToNextLevel = Math.pow((level + 1) * 4, 2)
+  const experienceToNextLevel = Math.pow((level + 1) * 4, 2);
+
+  useEffect(() => {
+    Notification.requestPermission();
+  },[]);
+
+  const levelUp = () => {
+    setLevel(level + 1);
+  };
 
   const startNewChallenge = () => {
     const radomChalengeIndex = Math.floor(Math.random() * challenges.length);
     const challengesSelected = challenges[radomChalengeIndex];
 
-    setActiveChallenge(challengesSelected)
+    setActiveChallenge(challengesSelected);
+
+    new Audio('/notification.mp3').play();
+
+    if (Notification.permission === 'granted') {
+      new Notification('Novo Desafio', {
+        body: `Valendo ${ challengesSelected.amount }xp!`
+      });
+    }
   };
 
   const resetChallenge = () => {
     setActiveChallenge(null);
+  };
+
+  const completedChallenge = () => {
+    if (!activeChallenge) {
+      return;
+    }
+    const { amount } = activeChallenge;
+    let finalExperience = currentExperience + amount;
+    if (finalExperience >= experienceToNextLevel) {
+      finalExperience = finalExperience - experienceToNextLevel;
+      levelUp();
+    }
+    setCurrentExperience(finalExperience);
+    setActiveChallenge(null);
+    setChallengesCompleted(challengesCompleted + 1);
   };
 
   const context = {
@@ -31,6 +62,7 @@ export const ChallengesProvider = ({ children }) => {
     experienceToNextLevel,
     startNewChallenge,
     resetChallenge,
+    completedChallenge,
   }
 
   return (
